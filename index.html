@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>漢字 Studio</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-type="module">
+    const { useState, useRef, useCallback, useEffect } = React;
+
+    const DEFAULT_WORDS = `名前\n氏名\n名前\n前\n午前\n国\n国際交流\n外国`;
+
+    const FONTS = [
+      { label: "Noto Serif JP", value: "'Noto Serif JP', serif", url: "https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap" },
+      { label: "Noto Sans JP", value: "'Noto Sans JP', sans-serif", url: "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" },
+      { label: "Zen Antique", value: "'Zen Antique', serif", url: "https://fonts.googleapis.com/css2?family=Zen+Antique&display=swap" },
+      { label: "Shippori Mincho", value: "'Shippori Mincho', serif", url: "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;700&display=swap" },
+      { label: "Yuji Syuku", value: "'Yuji Syuku', serif", url: "https://fonts.googleapis.com/css2?family=Yuji+Syuku&display=swap" },
+      { label: "Zen Maru Gothic", value: "'Zen Maru Gothic', sans-serif", url: "https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" },
+    ];
+
+    const PRESETS = [
+      { label: "Ink on Paper", bg: "#FAF6F0", fg: "#1a1a1a", font: 0 },
+      { label: "Chalk Board", bg: "#2d3a2d", fg: "#e8e4d4", font: 3 },
+      { label: "Red Seal", bg: "#f5f0e8", fg: "#b91c1c", font: 4 },
+      { label: "Neon Night", bg: "#0f0f1a", fg: "#00ffd5", font: 1 },
+      { label: "Minimal", bg: "#ffffff", fg: "#111111", font: 5 },
+      { label: "Washi", bg: "#e8ddd0", fg: "#3d2b1f", font: 2 },
+    ];
+
+    function loadFont(fontObj) {
+      return new Promise((resolve) => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = fontObj.url;
+        link.onload = () => { document.fonts.ready.then(resolve); };
+        link.onerror = resolve;
+        document.head.appendChild(link);
+      });
+    }
+
+    function renderToCanvas(text, { fontFamily, fontSize, bgColor, fgColor, padding, bold, roundness, scale }) {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const weight = bold ? "bold " : "";
+      const scaledFontSize = fontSize * scale;
+      const scaledPadding = padding * scale;
+      const fontStr = `${weight}${scaledFontSize}px ${fontFamily}`;
+      ctx.font = fontStr;
+      const metrics = ctx.measureText(text);
+      const textWidth = metrics.width;
+      const textHeight = scaledFontSize * 1.25;
+      canvas.width = Math.ceil(textWidth + scaledPadding * 2);
+      canvas.height = Math.ceil(textHeight + scaledPadding * 2);
+      const radius = Math.min(canvas.width, canvas.height) * (roundness / 100);
+      ctx.beginPath();
+      ctx.roundRect(0, 0, canvas.width, canvas.height, radius);
+      ctx.clip();
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = fontStr;
+      ctx.fillStyle = fgColor;
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      return canvas;
+    }
+
+    function KanjiGenerator() {
+      const [text, setText] = useState(DEFAULT_WORDS);
+      const [fontSize, setFontSize] = useState(200);
+      const [padding, setPadding] = useState(40);
+      const [bgColor, setBgColor] = useState("#FAF6F0");
+      const [fgColor, setFgColor] = useState("#1a1a1a");
+      const [fontIndex, setFontIndex] = useState(0);
+      const [bold, setBold] = useState(false);
+      const [roundness, setRoundness] = useState(12);
+      const [scale, setScale] = useState(1);
+      const [fontsLoaded, setFontsLoaded] = useState({});
+      const [previews, setPreviews] = useState([]);
+      const [generating, setGenerating] = useState(false);
+      const [selectedPreset, setSelectedPreset] = useState(0);
+      const previewRef = useRef(null);
+
+      useEffect(() => {
+        FONTS.forEach((f, i) => {
+          loadFont(f).then(() => setFontsLoaded((p) => ({ ...p, [i]: true })));
+        });
+      }, []);
+
+      const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+
+      const generatePreviews = useCallback(() => {
+        setGenerating(true);
+        requestAnimationFrame(() => {
+          const results = lines.map((line, i) => {
+            const canvas = renderToCanvas(line, {
+              fontFamily: FONTS[fontIndex].value,
+              fontSize,
+              bgColor,
+              fgColor,
+              padding,
+              bold,
+              roundness,
+              scale,
+            });
+            return { text: line, dataUrl: canvas.toDataURL("image/png"), index: i + 1 };
+          });
+          setPreviews(results);
+          setGenerating(false);
+        });
+      }, [lines, fontIndex, fontSize, bgColor, fgColor, padding, bold, roundness, scale]);
+
+      const downloadOne = (item) => {
+        const a = document.createElement("a");
+        a.href = item.dataUrl;
+        a.download = `${item.index}_${item.text}.png`;
+        a.click();
+      };
+
+      const downloadAll = () => {
+        previews.forEach((item, i) => {
+          setTimeout(() => downloadOne(item), i * 120);
+        });
+      };
+
+      const applyPreset = (i) => {
+        const p = PRESETS[i];
+        setSelectedPreset(i);
+        setBgColor(p.bg);
+        setFgColor(p.fg);
+        setFontIndex(p.font);
+      };
+
+      return (
+        <div style={{
+          minHeight: "100vh",
+          background: "linear-gradient(160deg, #0d0d0d 0%, #1a1520 50%, #0d1117 100%)",
+          color: "#e0dcd4",
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          padding: "0",
+        }}>
+          <style>{`
+            @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&display=swap');
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            ::-webkit-scrollbar { width: 6px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+            ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+            .panel { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 24px; }
+            .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.6px; color: #7a7570; margin-bottom: 8px; font-weight: 600; }
+            textarea { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #e0dcd4; padding: 14px; font-size: 18px; font-family: 'Zen Kaku Gothic New', sans-serif; resize: vertical; min-height: 160px; outline: none; transition: border-color 0.2s; line-height: 1.7; }
+            textarea:focus { border-color: rgba(255,255,255,0.2); }
+            input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; }
+            input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #e0dcd4; cursor: pointer; }
+            input[type="color"] { -webkit-appearance: none; border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; width: 44px; height: 44px; cursor: pointer; overflow: hidden; padding: 2px; background: transparent; }
+            input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+            input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+            .preset-btn { padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #b0aaa2; font-size: 12px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+            .preset-btn:hover { background: rgba(255,255,255,0.08); color: #e0dcd4; }
+            .preset-btn.active { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.2); }
+            .gen-btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 15px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; transition: all 0.25s; }
+            .gen-btn.primary { background: linear-gradient(135deg, #c9a96e 0%, #a67c52 100%); color: #0d0d0d; }
+            .gen-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 8px 30px rgba(201,169,110,0.25); }
+            .gen-btn.secondary { background: rgba(255,255,255,0.06); color: #c9a96e; border: 1px solid rgba(201,169,110,0.3); }
+            .gen-btn.secondary:hover { background: rgba(201,169,110,0.1); }
+            .card { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); transition: all 0.25s; position: relative; }
+            .card:hover { border-color: rgba(255,255,255,0.15); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+            .card img { width: 100%; display: block; }
+            .card-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.25s; display: flex; align-items: center; justify-content: center; }
+            .card:hover .card-overlay { opacity: 1; }
+            .dl-btn { padding: 10px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; font-size: 13px; cursor: pointer; backdrop-filter: blur(10px); transition: background 0.2s; }
+            .dl-btn:hover { background: rgba(255,255,255,0.2); }
+            .font-option { padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.2s; text-align: center; }
+            .font-option:hover { background: rgba(255,255,255,0.06); }
+            .font-option.active { background: rgba(201,169,110,0.12); border-color: rgba(201,169,110,0.4); }
+            .toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; color: #7a7570; }
+            .toggle-track { width: 36px; height: 20px; border-radius: 10px; background: rgba(255,255,255,0.1); position: relative; transition: background 0.2s; }
+            .toggle-track.on { background: rgba(201,169,110,0.5); }
+            .toggle-knob { width: 16px; height: 16px; border-radius: 50%; background: #e0dcd4; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; }
+            .toggle-track.on .toggle-knob { transform: translateX(16px); }
+            .badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; background: rgba(201,169,110,0.15); color: #c9a96e; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+            .fade-in { animation: fadeIn 0.4s ease forwards; }
+          `}</style>
+
+          <div style={{ padding: "40px 40px 0", maxWidth: 1400, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 6 }}>
+              <div style={{ fontSize: 32, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, color: "#e0dcd4", letterSpacing: "-0.5px" }}>
+                漢字 <span style={{ color: "#c9a96e" }}>Studio</span>
+              </div>
+              <span className="badge">v1.0</span>
+            </div>
+            <p style={{ color: "#5a5550", fontSize: 14, letterSpacing: "0.3px" }}>
+              Bulk image generator for Japanese vocabulary
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "380px 1fr", gap: 28, padding: "28px 40px 60px", maxWidth: 1400, margin: "0 auto", alignItems: "start" }}>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, position: "sticky", top: 20 }}>
+
+              <div className="panel">
+                <div className="label">Vocabulary List</div>
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={"One word per line...\n名前\n漢字\n日本語"}
+                />
+                <div style={{ marginTop: 8, fontSize: 12, color: "#5a5550" }}>
+                  {lines.length} word{lines.length !== 1 ? "s" : ""} ready
+                </div>
+              </div>
+
+              <div className="panel">
+                <div className="label">Style Presets</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {PRESETS.map((p, i) => (
+                    <button
+                      key={i}
+                      className={`preset-btn ${selectedPreset === i ? "active" : ""}`}
+                      onClick={() => applyPreset(i)}
+                    >
+                      <span style={{
+                        display: "inline-block", width: 10, height: 10, borderRadius: "50%",
+                        background: p.fg, border: `2px solid ${p.bg}`, marginRight: 6, verticalAlign: "middle",
+                        boxShadow: `0 0 0 1px rgba(255,255,255,0.1)`,
+                      }} />
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel">
+                <div className="label">Typeface</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  {FONTS.map((f, i) => (
+                    <div
+                      key={i}
+                      className={`font-option ${fontIndex === i ? "active" : ""}`}
+                      onClick={() => setFontIndex(i)}
+                      style={{ fontFamily: fontsLoaded[i] ? f.value : "inherit" }}
+                    >
+                      <div style={{ fontSize: 22, marginBottom: 2 }}>漢字</div>
+                      <div style={{ fontSize: 10, color: "#7a7570", fontFamily: "system-ui" }}>{f.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <label className="toggle" onClick={() => setBold(!bold)}>
+                    <div className={`toggle-track ${bold ? "on" : ""}`}>
+                      <div className="toggle-knob" />
+                    </div>
+                    Bold weight
+                  </label>
+                </div>
+              </div>
+
+              <div className="panel">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, rowGap: 14 }}>
+                  <div>
+                    <div className="label">Font Size — {fontSize}px</div>
+                    <input type="range" min={48} max={600} value={fontSize} onChange={(e) => setFontSize(+e.target.value)} />
+                  </div>
+                  <div>
+                    <div className="label">Padding — {padding}px</div>
+                    <input type="range" min={0} max={200} value={padding} onChange={(e) => setPadding(+e.target.value)} />
+                  </div>
+                  <div>
+                    <div className="label">Roundness — {roundness}%</div>
+                    <input type="range" min={0} max={50} value={roundness} onChange={(e) => setRoundness(+e.target.value)} />
+                  </div>
+                  <div>
+                    <div className="label">Resolution — {scale}x</div>
+                    <input type="range" min={0.5} max={4} step={0.5} value={scale} onChange={(e) => setScale(+e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="panel">
+                <div className="label">Colors</div>
+                <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
+                    <span style={{ fontSize: 12, color: "#7a7570" }}>Background</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <input type="color" value={fgColor} onChange={(e) => setFgColor(e.target.value)} />
+                    <span style={{ fontSize: 12, color: "#7a7570" }}>Text</span>
+                  </div>
+                  <button
+                    style={{ marginLeft: "auto", background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "#7a7570", padding: "6px 10px", fontSize: 11, cursor: "pointer" }}
+                    onClick={() => { const t = bgColor; setBgColor(fgColor); setFgColor(t); }}
+                  >
+                    ⇄ Swap
+                  </button>
+                </div>
+              </div>
+
+              <button className="gen-btn primary" onClick={generatePreviews} disabled={generating || lines.length === 0}>
+                {generating ? "Generating..." : `Generate ${lines.length} Image${lines.length !== 1 ? "s" : ""}`}
+              </button>
+
+              {previews.length > 0 && (
+                <button className="gen-btn secondary" onClick={downloadAll}>
+                  ↓ Download All ({previews.length} images)
+                </button>
+              )}
+            </div>
+
+            <div ref={previewRef}>
+              {previews.length === 0 ? (
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  minHeight: 500, border: "1px dashed rgba(255,255,255,0.08)", borderRadius: 14,
+                  flexDirection: "column", gap: 12,
+                }}>
+                  <div style={{ fontSize: 48, opacity: 0.15 }}>筆</div>
+                  <div style={{ color: "#5a5550", fontSize: 14 }}>Configure settings and hit Generate</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <div style={{ fontSize: 13, color: "#7a7570" }}>{previews.length} images generated</div>
+                  </div>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                    gap: 16,
+                  }}>
+                    {previews.map((item, i) => (
+                      <div key={i} className="card fade-in" style={{ animationDelay: `${i * 0.05}s`, opacity: 0 }}>
+                        <img src={item.dataUrl} alt={item.text} />
+                        <div className="card-overlay" onClick={() => downloadOne(item)}>
+                          <button className="dl-btn">↓ Download</button>
+                        </div>
+                        <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: 13, color: "#8a8580" }}>{item.text}</span>
+                          <span style={{ fontSize: 11, color: "#4a4540" }}>#{item.index}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<KanjiGenerator />);
+  </script>
+</body>
+</html>
