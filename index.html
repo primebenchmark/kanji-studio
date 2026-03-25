@@ -299,6 +299,15 @@
       const [selectedPreset, setSelectedPreset] = useState(0);
       const [theme, setTheme] = useState("dark");
       const [fontPage, setFontPage] = useState(0);
+      const [wmText, setWmText] = useState("");
+      const [wmTextPos, setWmTextPos] = useState("Bottom Right");
+      const [wmTextSize, setWmTextSize] = useState(14);
+      const [wmTextColor, setWmTextColor] = useState("#ffffff");
+      const [wmTextOpacity, setWmTextOpacity] = useState(0.5);
+      const [wmImage, setWmImage] = useState(null); // { src, name }
+      const [wmImagePos, setWmImagePos] = useState("Bottom Right");
+      const [wmImageOpacity, setWmImageOpacity] = useState(0.3);
+      const [wmImageScale, setWmImageScale] = useState(0.2);
       const previewRef = useRef(null);
       const t = THEMES[theme];
 
@@ -343,16 +352,81 @@
         });
       }, [lines, fontIndex, fontSize, bgColor, fgColor, padding, bold, roundness, scale]);
 
-      const downloadOne = (item) => {
+      const WM_POSITIONS = ["Center", "Top Left", "Top Center", "Top Right", "Bottom Left", "Bottom Center", "Bottom Right"];
+
+      function getWmCoords(pos, cw, ch, ew, eh, margin = 10) {
+        const m = margin;
+        switch (pos) {
+          case "Center": return [(cw - ew) / 2, (ch - eh) / 2];
+          case "Top Left": return [m, m];
+          case "Top Center": return [(cw - ew) / 2, m];
+          case "Top Right": return [cw - ew - m, m];
+          case "Bottom Left": return [m, ch - eh - m];
+          case "Bottom Center": return [(cw - ew) / 2, ch - eh - m];
+          case "Bottom Right": return [cw - ew - m, ch - eh - m];
+          default: return [cw - ew - m, ch - eh - m];
+        }
+      }
+
+      function applyWatermark(dataUrl) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const c = document.createElement("canvas");
+            c.width = img.width;
+            c.height = img.height;
+            const ctx = c.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+
+            // Text watermark
+            if (wmText.trim()) {
+              ctx.save();
+              ctx.globalAlpha = wmTextOpacity;
+              ctx.font = `${wmTextSize * (scale || 1)}px sans-serif`;
+              ctx.fillStyle = wmTextColor;
+              const metrics = ctx.measureText(wmText);
+              const tw = metrics.width;
+              const th = wmTextSize * (scale || 1);
+              const [tx, ty] = getWmCoords(wmTextPos, c.width, c.height, tw, th);
+              ctx.fillText(wmText, tx, ty + th);
+              ctx.restore();
+            }
+
+            // Image watermark
+            if (wmImage) {
+              const wmImg = new Image();
+              wmImg.onload = () => {
+                ctx.save();
+                ctx.globalAlpha = wmImageOpacity;
+                const ww = c.width * wmImageScale;
+                const wh = (wmImg.height / wmImg.width) * ww;
+                const [ix, iy] = getWmCoords(wmImagePos, c.width, c.height, ww, wh);
+                ctx.drawImage(wmImg, ix, iy, ww, wh);
+                ctx.restore();
+                resolve(c.toDataURL("image/png"));
+              };
+              wmImg.src = wmImage.src;
+            } else {
+              resolve(c.toDataURL("image/png"));
+            }
+          };
+          img.src = dataUrl;
+        });
+      }
+
+      const hasWatermark = wmText.trim() || wmImage;
+
+      const downloadOne = async (item) => {
+        const url = hasWatermark ? await applyWatermark(item.dataUrl) : item.dataUrl;
         const a = document.createElement("a");
-        a.href = item.dataUrl;
+        a.href = url;
         a.download = `${item.index}_${item.text}.png`;
         a.click();
       };
 
       const downloadAll = () => {
         previews.forEach((item, i) => {
-          setTimeout(() => downloadOne(item), i * 120);
+          setTimeout(() => downloadOne(item), i * 200);
         });
       };
 
@@ -552,6 +626,86 @@
                   >
                     ⇄ Swap
                   </button>
+                </div>
+              </div>
+
+              <div className="panel">
+                <div className="label">Watermark</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {/* Text watermark */}
+                  <div>
+                    <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>Text</div>
+                    <input
+                      type="text"
+                      value={wmText}
+                      onChange={(e) => setWmText(e.target.value)}
+                      placeholder="e.g. © My Name"
+                      style={{ width: "100%", background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 8, color: t.text, padding: "8px 10px", fontSize: 13, outline: "none" }}
+                    />
+                  </div>
+                  {wmText.trim() && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Position</div>
+                        <select value={wmTextPos} onChange={(e) => setWmTextPos(e.target.value)} style={{ width: "100%", background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 6, color: t.text, padding: "6px", fontSize: 12 }}>
+                          {WM_POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Color</div>
+                        <input type="color" value={wmTextColor} onChange={(e) => setWmTextColor(e.target.value)} style={{ width: 36, height: 36 }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Size — {wmTextSize}px</div>
+                        <input type="range" min={8} max={72} value={wmTextSize} onChange={(e) => setWmTextSize(+e.target.value)} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Opacity — {Math.round(wmTextOpacity * 100)}%</div>
+                        <input type="range" min={0.05} max={1} step={0.05} value={wmTextOpacity} onChange={(e) => setWmTextOpacity(+e.target.value)} />
+                      </div>
+                    </div>
+                  )}
+                  {/* Image watermark */}
+                  <div>
+                    <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>Image</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <label style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.muted, fontSize: 12, cursor: "pointer" }}>
+                        Choose File
+                        <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (ev) => setWmImage({ src: ev.target.result, name: file.name });
+                            reader.readAsDataURL(file);
+                          }
+                        }} />
+                      </label>
+                      {wmImage && (
+                        <>
+                          <span style={{ fontSize: 11, color: t.muted, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{wmImage.name}</span>
+                          <button onClick={() => setWmImage(null)} style={{ background: "none", border: "none", color: t.muted, cursor: "pointer", fontSize: 14 }}>✕</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {wmImage && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Position</div>
+                        <select value={wmImagePos} onChange={(e) => setWmImagePos(e.target.value)} style={{ width: "100%", background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 6, color: t.text, padding: "6px", fontSize: 12 }}>
+                          {WM_POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Scale — {Math.round(wmImageScale * 100)}%</div>
+                        <input type="range" min={0.05} max={0.8} step={0.05} value={wmImageScale} onChange={(e) => setWmImageScale(+e.target.value)} />
+                      </div>
+                      <div style={{ gridColumn: "span 2" }}>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Opacity — {Math.round(wmImageOpacity * 100)}%</div>
+                        <input type="range" min={0.05} max={1} step={0.05} value={wmImageOpacity} onChange={(e) => setWmImageOpacity(+e.target.value)} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
