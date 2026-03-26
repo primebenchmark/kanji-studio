@@ -325,7 +325,7 @@
         fontOptionActiveBg: "rgba(139,105,20,0.12)",
         fontOptionActiveBorder: "rgba(139,105,20,0.4)",
         toggleTrack: "rgba(0,0,0,0.15)",
-        toggleKnob: "#ffffff",
+        toggleKnob: "#8b6914",
         badgeBg: "rgba(139,105,20,0.12)",
         secondaryBtnBg: "rgba(0,0,0,0.04)",
         secondaryBtnBorder: "rgba(139,105,20,0.3)",
@@ -333,64 +333,102 @@
       },
     };
 
+    const CACHE_KEY = "kanji-studio-prefs";
+
+    function loadCache() {
+      try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch { return {}; }
+    }
+
+    function saveCache(prefs) {
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(prefs)); } catch {}
+    }
+
     function KanjiGenerator() {
-      const [text, setText] = useState(DEFAULT_WORDS);
-      const [fontSize, setFontSize] = useState(200);
-      const [padding, setPadding] = useState(40);
-      const [bgColor, setBgColor] = useState("#FAF6F0");
-      const [fgColor, setFgColor] = useState("#1a1a1a");
-      const [fontIndex, setFontIndex] = useState(0);
-      const [bold, setBold] = useState(false);
-      const [roundness, setRoundness] = useState(12);
-      const [scale, setScale] = useState(5);
+      const cached = React.useMemo(() => loadCache(), []);
+      const c = (key, fallback) => cached[key] !== undefined ? cached[key] : fallback;
+
+      const [text, setText] = useState(c("text", DEFAULT_WORDS));
+      const [fontSize, setFontSize] = useState(c("fontSize", 200));
+      const [padding, setPadding] = useState(c("padding", 40));
+      const [bgColor, setBgColor] = useState(c("bgColor", "#FAF6F0"));
+      const [fgColor, setFgColor] = useState(c("fgColor", "#1a1a1a"));
+      const [fontIndex, setFontIndex] = useState(c("fontIndex", 0));
+      const [bold, setBold] = useState(c("bold", false));
+      const [roundness, setRoundness] = useState(c("roundness", 12));
+      const [scale, setScale] = useState(c("scale", 5));
       const [fontsLoaded, setFontsLoaded] = useState({});
       const [previews, setPreviews] = useState([]);
       const [generating, setGenerating] = useState(false);
-      const [selectedPreset, setSelectedPreset] = useState(0);
-      const [theme, setTheme] = useState("dark");
-      const [fontPage, setFontPage] = useState(0); // kept for compat but unused
-      const [wmText, setWmText] = useState("Prime Benchmark Private Limited");
-      const [wmTextPos, setWmTextPos] = useState("Bottom Center");
-      const [wmTextSize, setWmTextSize] = useState(14);
-      const [wmTextColor, setWmTextColor] = useState("#ffffff");
-      const [wmTextOpacity, setWmTextOpacity] = useState(0.5);
-      const [wmImage, setWmImage] = useState({ src: "https://primebenchmark.com.np/logo.png", name: "primebenchmark.com.np/logo.png" });
-      const [wmImageUrl, setWmImageUrl] = useState("https://primebenchmark.com.np/logo.png");
-      const [wmImagePos, setWmImagePos] = useState("Center");
-      const [wmImageOpacity, setWmImageOpacity] = useState(0.25);
-      const [wmImageScale, setWmImageScale] = useState(0.2);
+      const [selectedPreset, setSelectedPreset] = useState(c("selectedPreset", 0));
+      const [theme, setTheme] = useState(c("theme", "dark"));
+      const [fontPage, setFontPage] = useState(0);
+      const [wmText, setWmText] = useState(c("wmText", "Prime Benchmark Private Limited"));
+      const [wmTextPos, setWmTextPos] = useState(c("wmTextPos", "Bottom Center"));
+      const [wmTextSize, setWmTextSize] = useState(c("wmTextSize", 14));
+      const [wmTextColor, setWmTextColor] = useState(c("wmTextColor", "#ffffff"));
+      const [wmTextOpacity, setWmTextOpacity] = useState(c("wmTextOpacity", 0.5));
+      const [wmImage, setWmImage] = useState(c("wmImage", { src: "https://primebenchmark.com.np/logo.png", name: "primebenchmark.com.np/logo.png" }));
+      const [wmImageUrl, setWmImageUrl] = useState(c("wmImageUrl", "https://primebenchmark.com.np/logo.png"));
+      const [wmImagePos, setWmImagePos] = useState(c("wmImagePos", "Center"));
+      const [wmImageOpacity, setWmImageOpacity] = useState(c("wmImageOpacity", 0.25));
+      const [wmImageScale, setWmImageScale] = useState(c("wmImageScale", 0.2));
+
+      // Persist preferences to localStorage whenever they change
+      useEffect(() => {
+        saveCache({
+          text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
+          selectedPreset, theme, wmText, wmTextPos, wmTextSize, wmTextColor, wmTextOpacity,
+          wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale,
+        });
+      }, [text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
+          selectedPreset, theme, wmText, wmTextPos, wmTextSize, wmTextColor, wmTextOpacity,
+          wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale]);
+
+      const clearCache = () => {
+        try { localStorage.removeItem(CACHE_KEY); } catch {}
+        window.location.reload();
+      };
       const [displayUrls, setDisplayUrls] = useState({});
       const previewRef = useRef(null);
+      const fontLoadPromises = useRef({});
       const t = THEMES[theme];
 
       useEffect(() => {
-        // Load all fonts
+        // Load all fonts and store promises by index
         FONTS.forEach((f, i) => {
-          loadFont(f).then(() => setFontsLoaded((p) => ({ ...p, [i]: true })));
+          fontLoadPromises.current[i] = loadFont(f).then(() => setFontsLoaded((p) => ({ ...p, [i]: true })));
         });
       }, []);
 
       const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
-      const generatePreviews = useCallback(() => {
+      const generatePreviews = useCallback(async () => {
         setGenerating(true);
-        requestAnimationFrame(() => {
-          const results = lines.map((line, i) => {
-            const canvas = renderToCanvas(line, {
-              fontFamily: FONTS[fontIndex].value,
-              fontSize,
-              bgColor,
-              fgColor,
-              padding,
-              bold,
-              roundness,
-              scale,
-            });
-            return { text: line, dataUrl: canvas.toDataURL("image/png"), index: i + 1 };
+        const fontFamily = FONTS[fontIndex].value;
+        const fontLabel = FONTS[fontIndex].label;
+        const weight = bold ? "bold" : "normal";
+        // Wait for the font stylesheet to load first, then ensure the font face is loaded
+        await (fontLoadPromises.current[fontIndex] || Promise.resolve());
+        await document.fonts.load(`${weight} ${fontSize * scale}px '${fontLabel}'`);
+        const results = lines.map((line, i) => {
+          const canvas = renderToCanvas(line, {
+            fontFamily,
+            fontSize,
+            bgColor,
+            fgColor,
+            padding,
+            bold,
+            roundness,
+            scale,
           });
-          setPreviews(results);
-          setGenerating(false);
+          return { text: line, dataUrl: canvas.toDataURL("image/png"), index: i + 1 };
         });
+        setPreviews(results);
+        setDisplayUrls({});
+        setGenerating(false);
       }, [lines, fontIndex, fontSize, bgColor, fgColor, padding, bold, roundness, scale]);
 
       useEffect(() => {
@@ -453,6 +491,7 @@
             // Image watermark
             if (wmImage) {
               const wmImg = new Image();
+              wmImg.crossOrigin = "anonymous";
               wmImg.onload = () => {
                 ctx.save();
                 ctx.globalAlpha = wmImageOpacity;
@@ -461,7 +500,26 @@
                 const [ix, iy] = getWmCoords(wmImagePos, c.width, c.height, ww, wh);
                 ctx.drawImage(wmImg, ix, iy, ww, wh);
                 ctx.restore();
-                try { resolve(c.toDataURL("image/png")); } catch (e) { resolve(dataUrl); }
+                try { resolve(c.toDataURL("image/png")); } catch (e) {
+                  // Canvas tainted — redraw without image watermark but keep text watermark
+                  const c2 = document.createElement("canvas");
+                  c2.width = img.width; c2.height = img.height;
+                  const ctx2 = c2.getContext("2d");
+                  ctx2.drawImage(img, 0, 0);
+                  if (wmText.trim()) {
+                    ctx2.save();
+                    ctx2.globalAlpha = wmTextOpacity;
+                    ctx2.font = `${wmTextSize * (scale || 1)}px sans-serif`;
+                    ctx2.fillStyle = wmTextColor;
+                    const metrics2 = ctx2.measureText(wmText);
+                    const tw2 = metrics2.width;
+                    const th2 = wmTextSize * (scale || 1);
+                    const [tx2, ty2] = getWmCoords(wmTextPos, c2.width, c2.height, tw2, th2);
+                    ctx2.fillText(wmText, tx2, ty2 + th2);
+                    ctx2.restore();
+                  }
+                  resolve(c2.toDataURL("image/png"));
+                }
               };
               wmImg.onerror = () => { resolve(c.toDataURL("image/png")); };
               wmImg.src = wmImage.src;
@@ -572,9 +630,14 @@
                   Bulk image generator for Japanese vocabulary
                 </p>
               </div>
-              <button className="theme-toggle-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                {theme === "dark" ? "☀ Light" : "● Dark"}
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="theme-toggle-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+                  {theme === "dark" ? "☀ Light" : "● Dark"}
+                </button>
+                <button className="theme-toggle-btn" onClick={clearCache} title="Clear all saved preferences and reload">
+                  ✕ Clear Cache
+                </button>
+              </div>
             </div>
           </div>
 
