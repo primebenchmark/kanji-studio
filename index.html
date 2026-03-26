@@ -233,7 +233,21 @@
       });
     }
 
-    function renderToCanvas(text, { fontFamily, fontSize, bgColor, fgColor, padding, bold, roundness, scale }) {
+    function getWmCoords(pos, cw, ch, ew, eh, margin = 10) {
+      const m = margin;
+      switch (pos) {
+        case "Center": return [(cw - ew) / 2, (ch - eh) / 2];
+        case "Top Left": return [m, m];
+        case "Top Center": return [(cw - ew) / 2, m];
+        case "Top Right": return [cw - ew - m, m];
+        case "Bottom Left": return [m, ch - eh - m];
+        case "Bottom Center": return [(cw - ew) / 2, ch - eh - m];
+        case "Bottom Right": return [cw - ew - m, ch - eh - m];
+        default: return [cw - ew - m, ch - eh - m];
+      }
+    }
+
+    function renderToCanvas(text, { fontFamily, fontSize, bgColor, fgColor, padding, bold, roundness, scale, watermark }) {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       const weight = bold ? "bold " : "";
@@ -252,6 +266,16 @@
       ctx.clip();
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Draw watermark image layer (between background and text)
+      if (watermark && watermark.image) {
+        ctx.save();
+        ctx.globalAlpha = watermark.imageOpacity;
+        const ww = canvas.width * watermark.imageScale;
+        const wh = (watermark.image.height / watermark.image.width) * ww;
+        const [ix, iy] = getWmCoords(watermark.imagePos, canvas.width, canvas.height, ww, wh);
+        ctx.drawImage(watermark.image, ix, iy, ww, wh);
+        ctx.restore();
+      }
       ctx.font = fontStr;
       ctx.fillStyle = fgColor;
       ctx.textBaseline = "middle";
@@ -413,6 +437,17 @@
         // Wait for the font stylesheet to load first, then ensure the font face is loaded
         await (fontLoadPromises.current[fontIndex] || Promise.resolve());
         await document.fonts.load(`${weight} ${fontSize * scale}px '${fontLabel}'`);
+        // Pre-load watermark image element if configured
+        let wmImageEl = null;
+        if (wmImage && wmImage.src) {
+          wmImageEl = await new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = wmImage.src;
+          });
+        }
         const results = lines.map((line, i) => {
           const canvas = renderToCanvas(line, {
             fontFamily,
@@ -423,13 +458,14 @@
             bold,
             roundness,
             scale,
+            watermark: wmImageEl ? { image: wmImageEl, imageOpacity: wmImageOpacity, imageScale: wmImageScale, imagePos: wmImagePos } : null,
           });
           return { text: line, dataUrl: canvas.toDataURL("image/png"), index: i + 1 };
         });
         setPreviews(results);
         setDisplayUrls({});
         setGenerating(false);
-      }, [lines, fontIndex, fontSize, bgColor, fgColor, padding, bold, roundness, scale]);
+      }, [lines, fontIndex, fontSize, bgColor, fgColor, padding, bold, roundness, scale, wmImage, wmImageOpacity, wmImageScale, wmImagePos]);
 
       useEffect(() => {
         if (previews.length === 0) { setDisplayUrls({}); return; }
@@ -446,26 +482,14 @@
             setDisplayUrls(prev => ({ ...prev, [i]: url }));
           });
         });
-      }, [previews, wmText, wmTextPos, wmTextSize, wmTextColor, wmTextOpacity, wmImage, wmImagePos, wmImageOpacity, wmImageScale]);
+      }, [previews, wmText, wmTextPos, wmTextSize, wmTextColor, wmTextOpacity]);
 
       const WM_POSITIONS = ["Center", "Top Left", "Top Center", "Top Right", "Bottom Left", "Bottom Center", "Bottom Right"];
 
-      function getWmCoords(pos, cw, ch, ew, eh, margin = 10) {
-        const m = margin;
-        switch (pos) {
-          case "Center": return [(cw - ew) / 2, (ch - eh) / 2];
-          case "Top Left": return [m, m];
-          case "Top Center": return [(cw - ew) / 2, m];
-          case "Top Right": return [cw - ew - m, m];
-          case "Bottom Left": return [m, ch - eh - m];
-          case "Bottom Center": return [(cw - ew) / 2, ch - eh - m];
-          case "Bottom Right": return [cw - ew - m, ch - eh - m];
-          default: return [cw - ew - m, ch - eh - m];
-        }
-      }
 
       function applyWatermark(dataUrl) {
         return new Promise((resolve) => {
+          if (!wmText.trim()) { resolve(dataUrl); return; }
           const img = new Image();
           img.onload = () => {
             const c = document.createElement("canvas");
@@ -473,59 +497,17 @@
             c.height = img.height;
             const ctx = c.getContext("2d");
             ctx.drawImage(img, 0, 0);
-
-            // Text watermark
-            if (wmText.trim()) {
-              ctx.save();
-              ctx.globalAlpha = wmTextOpacity;
-              ctx.font = `${wmTextSize * (scale || 1)}px sans-serif`;
-              ctx.fillStyle = wmTextColor;
-              const metrics = ctx.measureText(wmText);
-              const tw = metrics.width;
-              const th = wmTextSize * (scale || 1);
-              const [tx, ty] = getWmCoords(wmTextPos, c.width, c.height, tw, th);
-              ctx.fillText(wmText, tx, ty + th);
-              ctx.restore();
-            }
-
-            // Image watermark
-            if (wmImage) {
-              const wmImg = new Image();
-              wmImg.crossOrigin = "anonymous";
-              wmImg.onload = () => {
-                ctx.save();
-                ctx.globalAlpha = wmImageOpacity;
-                const ww = c.width * wmImageScale;
-                const wh = (wmImg.height / wmImg.width) * ww;
-                const [ix, iy] = getWmCoords(wmImagePos, c.width, c.height, ww, wh);
-                ctx.drawImage(wmImg, ix, iy, ww, wh);
-                ctx.restore();
-                try { resolve(c.toDataURL("image/png")); } catch (e) {
-                  // Canvas tainted — redraw without image watermark but keep text watermark
-                  const c2 = document.createElement("canvas");
-                  c2.width = img.width; c2.height = img.height;
-                  const ctx2 = c2.getContext("2d");
-                  ctx2.drawImage(img, 0, 0);
-                  if (wmText.trim()) {
-                    ctx2.save();
-                    ctx2.globalAlpha = wmTextOpacity;
-                    ctx2.font = `${wmTextSize * (scale || 1)}px sans-serif`;
-                    ctx2.fillStyle = wmTextColor;
-                    const metrics2 = ctx2.measureText(wmText);
-                    const tw2 = metrics2.width;
-                    const th2 = wmTextSize * (scale || 1);
-                    const [tx2, ty2] = getWmCoords(wmTextPos, c2.width, c2.height, tw2, th2);
-                    ctx2.fillText(wmText, tx2, ty2 + th2);
-                    ctx2.restore();
-                  }
-                  resolve(c2.toDataURL("image/png"));
-                }
-              };
-              wmImg.onerror = () => { resolve(c.toDataURL("image/png")); };
-              wmImg.src = wmImage.src;
-            } else {
-              resolve(c.toDataURL("image/png"));
-            }
+            ctx.save();
+            ctx.globalAlpha = wmTextOpacity;
+            ctx.font = `${wmTextSize * (scale || 1)}px sans-serif`;
+            ctx.fillStyle = wmTextColor;
+            const metrics = ctx.measureText(wmText);
+            const tw = metrics.width;
+            const th = wmTextSize * (scale || 1);
+            const [tx, ty] = getWmCoords(wmTextPos, c.width, c.height, tw, th);
+            ctx.fillText(wmText, tx, ty + th);
+            ctx.restore();
+            resolve(c.toDataURL("image/png"));
           };
           img.src = dataUrl;
         });
