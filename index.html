@@ -223,6 +223,107 @@
       { label: "Shadow", bg: "#050505", fg: "#8d8d8d", font: 1 },
     ];
 
+    const GRADIENT_PRESETS = [
+      { label: "Sunrise Bloom", bg: "linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)", fg: "#1a0a0a", font: 0 },
+      { label: "Ocean Breeze", bg: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", fg: "#ffffff", font: 1 },
+      { label: "Mint Dream", bg: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)", fg: "#1a2a1a", font: 5 },
+      { label: "Purple Haze", bg: "linear-gradient(135deg, #7b2ff7 0%, #c471f5 100%)", fg: "#ffffff", font: 4 },
+      { label: "Golden Hour", bg: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", fg: "#ffffff", font: 0 },
+      { label: "Northern Lights", bg: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", fg: "#0a1a14", font: 6 },
+      { label: "Deep Sea", bg: "linear-gradient(135deg, #0c3483 0%, #a2b6df 100%)", fg: "#ffffff", font: 1 },
+      { label: "Peach Sunset", bg: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", fg: "#3e1a0a", font: 2 },
+      { label: "Cosmic Dust", bg: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)", fg: "#e0e0ff", font: 4 },
+      { label: "Cherry Cola", bg: "linear-gradient(135deg, #eb3349 0%, #f45c43 100%)", fg: "#ffffff", font: 0 },
+      { label: "Forest Canopy", bg: "linear-gradient(135deg, #134e5e 0%, #71b280 100%)", fg: "#ffffff", font: 6 },
+      { label: "Lavender Fields", bg: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)", fg: "#1a0a2e", font: 3 },
+      { label: "Ember Fade", bg: "linear-gradient(135deg, #f83600 0%, #f9d423 100%)", fg: "#ffffff", font: 2 },
+      { label: "Arctic Aurora", bg: "linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%)", fg: "#ffffff", font: 5 },
+      { label: "Rose Quartz", bg: "linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)", fg: "#2a0a2a", font: 0 },
+      { label: "Midnight City", bg: "linear-gradient(135deg, #232526 0%, #414345 100%)", fg: "#e0e0e0", font: 1 },
+      { label: "Mango Tango", bg: "linear-gradient(135deg, #ffe259 0%, #ffa751 100%)", fg: "#2a1a00", font: 2 },
+      { label: "Sapphire Sky", bg: "linear-gradient(135deg, #0052d4 0%, #4364f7 50%, #6fb1fc 100%)", fg: "#ffffff", font: 1 },
+      { label: "Cotton Candy", bg: "linear-gradient(135deg, #f3e7e9 0%, #e3eeff 100%)", fg: "#4a2a4a", font: 3 },
+      { label: "Volcanic Ash", bg: "linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)", fg: "#ff8a65", font: 2 },
+      { label: "Spring Meadow", bg: "linear-gradient(135deg, #c6ea8d 0%, #fe90af 100%)", fg: "#1a2a0a", font: 6 },
+      { label: "Blueberry", bg: "linear-gradient(135deg, #4568dc 0%, #b06ab3 100%)", fg: "#ffffff", font: 4 },
+      { label: "Sand Dune", bg: "linear-gradient(135deg, #d4a574 0%, #e8cba8 100%)", fg: "#2a1a0a", font: 0 },
+      { label: "Neon Pulse", bg: "linear-gradient(135deg, #00f260 0%, #0575e6 100%)", fg: "#ffffff", font: 1 },
+      { label: "Dusty Rose", bg: "linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)", fg: "#3e1a2a", font: 3 },
+      { label: "Storm Cloud", bg: "linear-gradient(135deg, #373b44 0%, #4286f4 100%)", fg: "#ffffff", font: 5 },
+      { label: "Honey Drip", bg: "linear-gradient(135deg, #f7971e 0%, #ffd200 100%)", fg: "#2a1a00", font: 0 },
+      { label: "Twilight Zone", bg: "linear-gradient(135deg, #141e30 0%, #243b55 100%)", fg: "#cfd8dc", font: 1 },
+      { label: "Watermelon", bg: "linear-gradient(135deg, #ff6b6b 0%, #556270 100%)", fg: "#ffffff", font: 2 },
+      { label: "Sage Mist", bg: "linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%)", fg: "#ffffff", font: 5 },
+      { label: "Tangerine Dream", bg: "linear-gradient(135deg, #ff5f6d 0%, #ffc371 100%)", fg: "#ffffff", font: 0 },
+      { label: "Galactic", bg: "linear-gradient(135deg, #654ea3 0%, #eaafc8 100%)", fg: "#ffffff", font: 4 },
+      { label: "Bamboo Shade", bg: "linear-gradient(135deg, #2d5016 0%, #89a83a 100%)", fg: "#ffffff", font: 6 },
+      { label: "Coral Reef", bg: "linear-gradient(135deg, #ff9966 0%, #ff5e62 100%)", fg: "#ffffff", font: 0 },
+      { label: "Winter Frost", bg: "linear-gradient(135deg, #e6dada 0%, #274046 100%)", fg: "#ffffff", font: 5 },
+      { label: "Plum Wine", bg: "linear-gradient(135deg, #360033 0%, #0b8793 100%)", fg: "#ffffff", font: 4 },
+      { label: "Lemon Zest", bg: "linear-gradient(135deg, #f7ff00 0%, #db36a4 100%)", fg: "#1a1a00", font: 2 },
+      { label: "Shadow Play", bg: "linear-gradient(135deg, #000000 0%, #434343 100%)", fg: "#e0e0e0", font: 1 },
+      { label: "Tropical Punch", bg: "linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%)", fg: "#ffffff", font: 0 },
+      { label: "Moonstone", bg: "linear-gradient(135deg, #c9d6ff 0%, #e2e2e2 100%)", fg: "#1a1a3e", font: 3 },
+      { label: "Jade Temple", bg: "linear-gradient(135deg, #0f9b0f 0%, #000000 100%)", fg: "#80ff80", font: 6 },
+      { label: "Flamingo", bg: "linear-gradient(135deg, #f54ea2 0%, #ff7676 100%)", fg: "#ffffff", font: 0 },
+      { label: "Glacier Blue", bg: "linear-gradient(135deg, #74ebd5 0%, #acb6e5 100%)", fg: "#0a1a28", font: 5 },
+      { label: "Obsidian Flame", bg: "linear-gradient(135deg, #000000 0%, #e74c3c 100%)", fg: "#ffffff", font: 2 },
+      { label: "Pastel Sky", bg: "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)", fg: "#1a2a3e", font: 3 },
+      { label: "Ruby Glow", bg: "linear-gradient(135deg, #870000 0%, #190a05 100%)", fg: "#ff6b6b", font: 4 },
+      { label: "Seafoam Wave", bg: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)", fg: "#ffffff", font: 6 },
+      { label: "Blush", bg: "linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)", fg: "#3e1a2a", font: 0 },
+      { label: "Iron Gray", bg: "linear-gradient(135deg, #485563 0%, #29323c 100%)", fg: "#e0e0e0", font: 1 },
+      { label: "Citrus Burst", bg: "linear-gradient(135deg, #f9d423 0%, #ff4e50 100%)", fg: "#1a0a00", font: 2 },
+      { label: "Amethyst Cave", bg: "linear-gradient(135deg, #9d50bb 0%, #6e48aa 100%)", fg: "#ffffff", font: 4 },
+      { label: "Palm Leaf", bg: "linear-gradient(135deg, #0ba360 0%, #3cba92 100%)", fg: "#ffffff", font: 6 },
+      { label: "Copper Rust", bg: "linear-gradient(135deg, #b79891 0%, #94716b 100%)", fg: "#ffffff", font: 0 },
+      { label: "Electric Violet", bg: "linear-gradient(135deg, #4776e6 0%, #8e54e9 100%)", fg: "#ffffff", font: 4 },
+      { label: "Warm Ember", bg: "linear-gradient(135deg, #c94b4b 0%, #4b134f 100%)", fg: "#ffd6d6", font: 2 },
+      { label: "Fern Glow", bg: "linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)", fg: "#0a1a00", font: 6 },
+      { label: "Bluebell", bg: "linear-gradient(135deg, #396afc 0%, #2948ff 100%)", fg: "#ffffff", font: 1 },
+      { label: "Sandstorm", bg: "linear-gradient(135deg, #c2b280 0%, #d4a76a 100%)", fg: "#2a1a00", font: 3 },
+      { label: "Orchid Dream", bg: "linear-gradient(135deg, #da22ff 0%, #9733ee 100%)", fg: "#ffffff", font: 4 },
+      { label: "Ash Cloud", bg: "linear-gradient(135deg, #606c88 0%, #3f4c6b 100%)", fg: "#e0e0e0", font: 1 },
+      { label: "Lava Flow", bg: "linear-gradient(135deg, #f12711 0%, #f5af19 100%)", fg: "#ffffff", font: 2 },
+      { label: "Tidal Wave", bg: "linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)", fg: "#ffffff", font: 5 },
+      { label: "Velvet Night", bg: "linear-gradient(135deg, #1f1c2c 0%, #928dab 100%)", fg: "#ffffff", font: 3 },
+      { label: "Apricot Glow", bg: "linear-gradient(135deg, #fceabb 0%, #f8b500 100%)", fg: "#2a1a00", font: 0 },
+      { label: "Mystic Forest", bg: "linear-gradient(135deg, #0d3b0d 0%, #3e8e41 100%)", fg: "#c8ffc8", font: 6 },
+      { label: "Pink Lemonade", bg: "linear-gradient(135deg, #ffc0cb 0%, #fffacd 100%)", fg: "#3e1a2a", font: 0 },
+      { label: "Thunder Strike", bg: "linear-gradient(135deg, #1a1a2e 0%, #e94560 100%)", fg: "#ffffff", font: 2 },
+      { label: "Silver Lining", bg: "linear-gradient(135deg, #bdc3c7 0%, #ecf0f1 100%)", fg: "#2c3e50", font: 5 },
+      { label: "Frozen Berry", bg: "linear-gradient(135deg, #6a3093 0%, #a044ff 100%)", fg: "#ffffff", font: 4 },
+      { label: "Burnt Sienna", bg: "linear-gradient(135deg, #7b4397 0%, #dc2430 100%)", fg: "#ffffff", font: 2 },
+      { label: "Pacific Rim", bg: "linear-gradient(135deg, #1cb5e0 0%, #000046 100%)", fg: "#ffffff", font: 1 },
+      { label: "Champagne", bg: "linear-gradient(135deg, #f7e7ce 0%, #d4a76a 100%)", fg: "#2a1a0a", font: 3 },
+      { label: "Dark Matter", bg: "linear-gradient(135deg, #000000 0%, #0f0c29 50%, #302b63 100%)", fg: "#b388ff", font: 4 },
+      { label: "Lime Soda", bg: "linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%)", fg: "#0a2a0a", font: 6 },
+      { label: "Crimson Tide", bg: "linear-gradient(135deg, #642b73 0%, #c6426e 100%)", fg: "#ffffff", font: 0 },
+      { label: "Sky at Dusk", bg: "linear-gradient(135deg, #2980b9 0%, #6dd5fa 50%, #ffffff 100%)", fg: "#0a1a28", font: 5 },
+      { label: "Caramel Swirl", bg: "linear-gradient(135deg, #c0392b 0%, #f39c12 100%)", fg: "#ffffff", font: 0 },
+      { label: "Misty Mountain", bg: "linear-gradient(135deg, #606c88 0%, #3f4c6b 100%)", fg: "#c0c8d8", font: 3 },
+      { label: "Electric Lime", bg: "linear-gradient(135deg, #b4ec51 0%, #429321 100%)", fg: "#ffffff", font: 6 },
+      { label: "Starlight", bg: "linear-gradient(135deg, #0f0c29 0%, #24243e 100%)", fg: "#ffd700", font: 3 },
+      { label: "Bubblegum", bg: "linear-gradient(135deg, #ff61d2 0%, #fe9090 100%)", fg: "#ffffff", font: 0 },
+      { label: "Deep Ocean", bg: "linear-gradient(135deg, #000428 0%, #004e92 100%)", fg: "#ffffff", font: 1 },
+      { label: "Autumn Blaze", bg: "linear-gradient(135deg, #d38312 0%, #a83279 100%)", fg: "#ffffff", font: 2 },
+      { label: "Zen Stone", bg: "linear-gradient(135deg, #757f9a 0%, #d7dde8 100%)", fg: "#1a1a2e", font: 5 },
+      { label: "Solar Flare", bg: "linear-gradient(135deg, #f37335 0%, #fdc830 100%)", fg: "#1a0a00", font: 0 },
+      { label: "Wisteria", bg: "linear-gradient(135deg, #c471f5 0%, #fa71cd 100%)", fg: "#ffffff", font: 4 },
+      { label: "Frozen Lake", bg: "linear-gradient(135deg, #c2e9fb 0%, #a1c4fd 100%)", fg: "#0a1a3e", font: 5 },
+      { label: "Redwood", bg: "linear-gradient(135deg, #3e0000 0%, #7f1d1d 100%)", fg: "#ffb3b3", font: 2 },
+      { label: "Pistachio", bg: "linear-gradient(135deg, #93f9b9 0%, #1d976c 100%)", fg: "#0a2a14", font: 6 },
+      { label: "Midnight Jazz", bg: "linear-gradient(135deg, #1a002e 0%, #4a148c 100%)", fg: "#ce93d8", font: 4 },
+      { label: "Sunrise Peak", bg: "linear-gradient(135deg, #ff512f 0%, #f09819 100%)", fg: "#ffffff", font: 0 },
+      { label: "Steel Blue", bg: "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)", fg: "#ffffff", font: 1 },
+      { label: "Blossom Rain", bg: "linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #f48fb1 100%)", fg: "#880e4f", font: 0 },
+      { label: "Charcoal Gold", bg: "linear-gradient(135deg, #1a1a1a 0%, #3d3d3d 100%)", fg: "#ffd700", font: 3 },
+      { label: "Aqua Marine", bg: "linear-gradient(135deg, #1a2980 0%, #26d0ce 100%)", fg: "#ffffff", font: 5 },
+      { label: "Sakura Dusk", bg: "linear-gradient(135deg, #2a0a14 0%, #c2185b 100%)", fg: "#ffc0cb", font: 3 },
+      { label: "Emerald Isle", bg: "linear-gradient(135deg, #005c1a 0%, #00c853 100%)", fg: "#ffffff", font: 6 },
+      { label: "Cosmic Latte", bg: "linear-gradient(135deg, #fff8e7 0%, #d4c5a9 100%)", fg: "#3e2a0a", font: 0 },
+    ];
+
     function loadFont(fontObj) {
       return new Promise((resolve) => {
         const link = document.createElement("link");
@@ -248,6 +349,23 @@
       }
     }
 
+    function createCanvasGradient(ctx, cssGradient, w, h) {
+      const m = cssGradient.match(/linear-gradient\((\d+)deg,\s*(.+)\)/);
+      if (!m) return cssGradient;
+      const angle = parseFloat(m[1]) * Math.PI / 180;
+      const cx = w / 2, cy = h / 2;
+      const len = Math.abs(w * Math.sin(angle)) + Math.abs(h * Math.cos(angle));
+      const x1 = cx - (len / 2) * Math.sin(angle), y1 = cy - (len / 2) * Math.cos(angle);
+      const x2 = cx + (len / 2) * Math.sin(angle), y2 = cy + (len / 2) * Math.cos(angle);
+      const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+      const stops = m[2].match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))\s+([\d.]+%)/g);
+      if (stops) stops.forEach(s => {
+        const parts = s.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))\s+([\d.]+%)/);
+        if (parts) grad.addColorStop(parseFloat(parts[2]) / 100, parts[1]);
+      });
+      return grad;
+    }
+
     function renderToCanvas(text, { fontFamily, fontSize, bgColor, fgColor, padding, bold, roundness, scale, watermark }) {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
@@ -265,7 +383,7 @@
       ctx.beginPath();
       ctx.roundRect(0, 0, canvas.width, canvas.height, radius);
       ctx.clip();
-      ctx.fillStyle = bgColor;
+      ctx.fillStyle = bgColor.includes("gradient") ? createCanvasGradient(ctx, bgColor, canvas.width, canvas.height) : bgColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       // Draw watermark image layer (between background and text)
       if (watermark && watermark.image) {
@@ -388,6 +506,7 @@
       const [previews, setPreviews] = useState([]);
       const [generating, setGenerating] = useState(false);
       const [selectedPreset, setSelectedPreset] = useState(c("selectedPreset", 0));
+      const [presetType, setPresetType] = useState(c("presetType", "solid"));
       const [theme, setTheme] = useState(c("theme", "dark"));
       const [fontPage, setFontPage] = useState(0);
       const [wmText, setWmText] = useState(c("wmText", "Prime Benchmark Private Limited"));
@@ -406,11 +525,11 @@
       useEffect(() => {
         saveCache({
           text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
-          selectedPreset, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
+          selectedPreset, presetType, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
           wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale,
         });
       }, [text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
-          selectedPreset, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
+          selectedPreset, presetType, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
           wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale]);
 
       const clearCache = () => {
@@ -591,9 +710,11 @@
         URL.revokeObjectURL(a.href);
       };
 
-      const applyPreset = (i) => {
-        const p = PRESETS[i];
+      const applyPreset = (i, type) => {
+        const list = type === "gradient" ? GRADIENT_PRESETS : PRESETS;
+        const p = list[i];
         setSelectedPreset(i);
+        setPresetType(type || presetType);
         setBgColor(p.bg);
         setFgColor(p.fg);
         setFontIndex(p.font);
@@ -702,17 +823,31 @@
               </div>
 
               <div className="panel">
-                <div className="label">Style Presets — {PRESETS.length}</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div className="label" style={{ marginBottom: 0 }}>Style Presets — {presetType === "gradient" ? GRADIENT_PRESETS.length : PRESETS.length}</div>
+                  <select
+                    value={presetType}
+                    onChange={(e) => { setPresetType(e.target.value); setSelectedPreset(0); }}
+                    style={{ background: t.presetBg, border: `1px solid ${t.presetBorder}`, borderRadius: 8, color: t.muted, padding: "6px 12px", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.2s" }}
+                    onMouseEnter={(e) => { e.target.style.background = t.presetHoverBg; e.target.style.color = t.text; }}
+                    onMouseLeave={(e) => { e.target.style.background = t.presetBg; e.target.style.color = t.muted; }}
+                  >
+                    <option value="solid">Solid Color</option>
+                    <option value="gradient">Gradient</option>
+                  </select>
+                </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 200, overflowY: "auto", paddingRight: 4 }}>
-                  {PRESETS.map((p, i) => (
+                  {(presetType === "gradient" ? GRADIENT_PRESETS : PRESETS).map((p, i) => (
                     <button
                       key={i}
                       className={`preset-btn ${selectedPreset === i ? "active" : ""}`}
-                      onClick={() => applyPreset(i)}
+                      onClick={() => applyPreset(i, presetType)}
                     >
                       <span style={{
                         display: "inline-block", width: 10, height: 10, borderRadius: "50%",
-                        background: p.fg, border: `2px solid ${p.bg}`, marginRight: 6, verticalAlign: "middle",
+                        background: presetType === "gradient" ? p.bg : p.fg,
+                        border: presetType === "gradient" ? "none" : `2px solid ${p.bg}`,
+                        marginRight: 6, verticalAlign: "middle",
                         boxShadow: `0 0 0 1px rgba(255,255,255,0.1)`,
                       }} />
                       {p.label}
@@ -773,7 +908,11 @@
                 <div className="label">Colors</div>
                 <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
+                    {bgColor.includes("gradient") ? (
+                      <div style={{ width: 44, height: 44, borderRadius: 8, background: bgColor, border: `2px solid ${t.inputBorder}`, flexShrink: 0 }} />
+                    ) : (
+                      <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
+                    )}
                     <span style={{ fontSize: 12, color: t.muted }}>Background</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -782,7 +921,8 @@
                   </div>
                   <button
                     style={{ marginLeft: "auto", background: "none", border: `1px solid ${t.swapBtnBorder}`, borderRadius: 6, color: t.muted, padding: "6px 10px", fontSize: 11, cursor: "pointer" }}
-                    onClick={() => { const tmp = bgColor; setBgColor(fgColor); setFgColor(tmp); }}
+                    onClick={() => { if (!bgColor.includes("gradient")) { const tmp = bgColor; setBgColor(fgColor); setFgColor(tmp); } }}
+                    disabled={bgColor.includes("gradient")}
                   >
                     ⇄ Swap
                   </button>
