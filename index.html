@@ -537,6 +537,7 @@
       const [aspectRatioEnabled, setAspectRatioEnabled] = useState(c("aspectRatioEnabled", false));
       const [aspectRatioW, setAspectRatioW] = useState(c("aspectRatioW", 1));
       const [aspectRatioH, setAspectRatioH] = useState(c("aspectRatioH", 1));
+      const [serialInFilename, setSerialInFilename] = useState(c("serialInFilename", false));
 
       // Persist preferences to localStorage whenever they change
       useEffect(() => {
@@ -544,12 +545,12 @@
           text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
           selectedPreset, presetType, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
           wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale,
-          aspectRatioEnabled, aspectRatioW, aspectRatioH,
+          aspectRatioEnabled, aspectRatioW, aspectRatioH, serialInFilename,
         });
       }, [text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
           selectedPreset, presetType, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
           wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale,
-          aspectRatioEnabled, aspectRatioW, aspectRatioH]);
+          aspectRatioEnabled, aspectRatioW, aspectRatioH, serialInFilename]);
 
       const [showClearModal, setShowClearModal] = useState(false);
       const [clearConfirmText, setClearConfirmText] = useState("");
@@ -704,26 +705,36 @@
 
       const hasWatermark = wmText.trim() || wmImage;
 
-      const downloadOne = async (item) => {
+      const getFilename = (item, index) => {
+        const name = item.text;
+        if (serialInFilename) {
+          const serial = String(index + 1).padStart(String(previews.length).length, "0");
+          return `${serial}_${name}.png`;
+        }
+        return `${name}.png`;
+      };
+
+      const downloadOne = async (item, index) => {
         const url = hasWatermark ? await applyWatermark(item.dataUrl) : item.dataUrl;
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${item.text}.png`;
+        a.download = getFilename(item, index);
         a.click();
       };
 
       const downloadAll = () => {
         previews.forEach((item, i) => {
-          setTimeout(() => downloadOne(item), i * 200);
+          setTimeout(() => downloadOne(item, i), i * 200);
         });
       };
 
       const downloadZip = async () => {
         const zip = new JSZip();
-        for (const item of previews) {
+        for (let idx = 0; idx < previews.length; idx++) {
+          const item = previews[idx];
           const url = hasWatermark ? await applyWatermark(item.dataUrl) : item.dataUrl;
           const base64 = url.split(",")[1];
-          zip.file(`${item.text}.png`, base64, { base64: true });
+          zip.file(getFilename(item, idx), base64, { base64: true });
         }
         const blob = await zip.generateAsync({ type: "blob" });
         const a = document.createElement("a");
@@ -1133,6 +1144,10 @@
                     ↓ ZIP{previews.length > 0 ? ` (${previews.length})` : ""}
                   </button>
                 </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: t.muted, cursor: "pointer", userSelect: "none" }}>
+                  <input type="checkbox" checked={serialInFilename} onChange={e => setSerialInFilename(e.target.checked)} style={{ accentColor: t.accent, width: 14, height: 14 }} />
+                  Prefix filenames with serial number
+                </label>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button className="gen-btn secondary" onClick={() => setText("")} style={{ flex: 1, color: "#e07070" }}>
                     ✕ Clear List
@@ -1167,7 +1182,7 @@
                     {previews.map((item, i) => (
                       <div key={i} className="card fade-in" style={{ animationDelay: `${i * 0.05}s`, opacity: 0 }}>
                         <img src={displayUrls[i] || item.dataUrl} alt={item.text} />
-                        <div className="card-overlay" onClick={() => downloadOne(item)}>
+                        <div className="card-overlay" onClick={() => downloadOne(item, i)}>
                           <button className="dl-btn">↓ Download</button>
                         </div>
                         <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
