@@ -366,7 +366,7 @@
       return grad;
     }
 
-    function renderToCanvas(text, { fontFamily, fontSize, bgColor, fgColor, padding, bold, roundness, scale, watermark }) {
+    function renderToCanvas(text, { fontFamily, fontSize, bgColor, fgColor, padding, bold, roundness, scale, watermark, aspectRatio }) {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       const weight = bold ? "bold " : "";
@@ -377,8 +377,22 @@
       const metrics = ctx.measureText(text);
       const textWidth = metrics.width;
       const textHeight = scaledFontSize * 1.25;
-      canvas.width = Math.ceil(textWidth + scaledPadding * 2);
-      canvas.height = Math.ceil(textHeight + scaledPadding * 2);
+      const naturalW = Math.ceil(textWidth + scaledPadding * 2);
+      const naturalH = Math.ceil(textHeight + scaledPadding * 2);
+      if (aspectRatio) {
+        const targetRatio = aspectRatio.w / aspectRatio.h;
+        const naturalRatio = naturalW / naturalH;
+        if (targetRatio > naturalRatio) {
+          canvas.width = Math.ceil(naturalH * targetRatio);
+          canvas.height = naturalH;
+        } else {
+          canvas.width = naturalW;
+          canvas.height = Math.ceil(naturalW / targetRatio);
+        }
+      } else {
+        canvas.width = naturalW;
+        canvas.height = naturalH;
+      }
       const radius = Math.min(canvas.width, canvas.height) * (roundness / 100);
       ctx.beginPath();
       ctx.roundRect(0, 0, canvas.width, canvas.height, radius);
@@ -520,6 +534,9 @@
       const [wmImagePos, setWmImagePos] = useState(c("wmImagePos", "Center"));
       const [wmImageOpacity, setWmImageOpacity] = useState(c("wmImageOpacity", 0.25));
       const [wmImageScale, setWmImageScale] = useState(c("wmImageScale", 0.2));
+      const [aspectRatioEnabled, setAspectRatioEnabled] = useState(c("aspectRatioEnabled", false));
+      const [aspectRatioW, setAspectRatioW] = useState(c("aspectRatioW", 1));
+      const [aspectRatioH, setAspectRatioH] = useState(c("aspectRatioH", 1));
 
       // Persist preferences to localStorage whenever they change
       useEffect(() => {
@@ -527,10 +544,12 @@
           text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
           selectedPreset, presetType, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
           wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale,
+          aspectRatioEnabled, aspectRatioW, aspectRatioH,
         });
       }, [text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
           selectedPreset, presetType, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
-          wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale]);
+          wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale,
+          aspectRatioEnabled, aspectRatioW, aspectRatioH]);
 
       const [showClearModal, setShowClearModal] = useState(false);
       const [clearConfirmText, setClearConfirmText] = useState("");
@@ -571,6 +590,7 @@
             img.src = wmImage.src;
           });
         }
+        const arParam = aspectRatioEnabled ? { w: aspectRatioW, h: aspectRatioH } : null;
         const results = lines.map((line, i) => {
           const canvas = renderToCanvas(line, {
             fontFamily,
@@ -582,13 +602,14 @@
             roundness,
             scale,
             watermark: wmImageEl ? { image: wmImageEl, imageOpacity: wmImageOpacity, imageScale: wmImageScale, imagePos: wmImagePos } : null,
+            aspectRatio: arParam,
           });
           return { text: line, dataUrl: canvas.toDataURL("image/png"), index: i + 1 };
         });
         setPreviews(results);
         setDisplayUrls({});
         setGenerating(false);
-      }, [lines, fontIndex, fontSize, bgColor, fgColor, padding, bold, roundness, scale, wmImage, wmImageOpacity, wmImageScale, wmImagePos]);
+      }, [lines, fontIndex, fontSize, bgColor, fgColor, padding, bold, roundness, scale, wmImage, wmImageOpacity, wmImageScale, wmImagePos, aspectRatioEnabled, aspectRatioW, aspectRatioH]);
 
       useEffect(() => {
         if (previews.length === 0) { setDisplayUrls({}); return; }
@@ -932,6 +953,48 @@
                     <div className="label">Resolution — {scale}x</div>
                     <input type="range" min={0.5} max={10} step={0.5} value={scale} onChange={(e) => setScale(+e.target.value)} />
                   </div>
+                </div>
+                <div style={{ marginTop: 14 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+                    <input
+                      type="checkbox"
+                      checked={aspectRatioEnabled}
+                      onChange={(e) => setAspectRatioEnabled(e.target.checked)}
+                      style={{ accentColor: t.accent, width: 15, height: 15 }}
+                    />
+                    <span className="label" style={{ margin: 0 }}>Fixed Aspect Ratio</span>
+                  </label>
+                  {aspectRatioEnabled && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+                      <input
+                        type="number"
+                        min={0.1}
+                        step={0.1}
+                        value={aspectRatioW}
+                        onChange={(e) => setAspectRatioW(Math.max(0.1, +e.target.value))}
+                        style={{ width: 60, background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 6, color: t.text, padding: "5px 8px", fontSize: 13, textAlign: "center" }}
+                      />
+                      <span style={{ color: t.muted, fontSize: 14 }}>:</span>
+                      <input
+                        type="number"
+                        min={0.1}
+                        step={0.1}
+                        value={aspectRatioH}
+                        onChange={(e) => setAspectRatioH(Math.max(0.1, +e.target.value))}
+                        style={{ width: 60, background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 6, color: t.text, padding: "5px 8px", fontSize: 13, textAlign: "center" }}
+                      />
+                      <span style={{ color: t.muted, fontSize: 11 }}>W : H</span>
+                      <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                        {[["1:1","1","1"],["4:3","4","3"],["3:4","3","4"],["16:9","16","9"]].map(([label,w,h]) => (
+                          <button
+                            key={label}
+                            onClick={() => { setAspectRatioW(+w); setAspectRatioH(+h); }}
+                            style={{ background: (aspectRatioW===+w && aspectRatioH===+h) ? t.accent : "none", border: `1px solid ${t.inputBorder}`, borderRadius: 4, color: (aspectRatioW===+w && aspectRatioH===+h) ? "#000" : t.muted, padding: "3px 6px", fontSize: 10, cursor: "pointer" }}
+                          >{label}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
