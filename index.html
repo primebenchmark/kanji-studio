@@ -537,7 +537,7 @@
         const url = hasWatermark ? await applyWatermark(item.dataUrl) : item.dataUrl;
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${item.index}_${item.text}.png`;
+        a.download = `${item.text}.png`;
         a.click();
       };
 
@@ -624,7 +624,7 @@
                   <div style={{ fontSize: 32, fontFamily: "'Zen Kaku Gothic New', sans-serif", fontWeight: 700, color: t.text, letterSpacing: "-0.5px" }}>
                     漢字 <span style={{ color: t.accent }}>Studio</span>
                   </div>
-                  <span className="badge">v1.0</span>
+                  <span className="badge">v2.6</span>
                 </div>
                 <p style={{ color: t.dimmed, fontSize: 14, letterSpacing: "0.3px" }}>
                   Bulk image generator for Japanese vocabulary
@@ -773,11 +773,11 @@
                       </div>
                       <div>
                         <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Size — {wmTextSize}px</div>
-                        <input type="range" min={8} max={72} value={wmTextSize} onChange={(e) => setWmTextSize(+e.target.value)} />
+                        <input type="range" min={0} max={72} step={1} value={wmTextSize} onChange={(e) => setWmTextSize(+e.target.value)} />
                       </div>
                       <div>
                         <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Opacity — {Math.round(wmTextOpacity * 100)}%</div>
-                        <input type="range" min={0.05} max={1} step={0.05} value={wmTextOpacity} onChange={(e) => setWmTextOpacity(+e.target.value)} />
+                        <input type="range" min={0} max={100} step={1} value={Math.round(wmTextOpacity * 100)} onChange={(e) => setWmTextOpacity(+e.target.value / 100)} />
                       </div>
                     </div>
                   )}
@@ -826,11 +826,11 @@
                       </div>
                       <div>
                         <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Scale — {Math.round(wmImageScale * 100)}%</div>
-                        <input type="range" min={0.05} max={0.8} step={0.05} value={wmImageScale} onChange={(e) => setWmImageScale(+e.target.value)} />
+                        <input type="range" min={0} max={100} step={1} value={Math.round(wmImageScale * 100)} onChange={(e) => setWmImageScale(+e.target.value / 100)} />
                       </div>
                       <div style={{ gridColumn: "span 2" }}>
                         <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Opacity — {Math.round(wmImageOpacity * 100)}%</div>
-                        <input type="range" min={0.05} max={1} step={0.05} value={wmImageOpacity} onChange={(e) => setWmImageOpacity(+e.target.value)} />
+                        <input type="range" min={0} max={100} step={1} value={Math.round(wmImageOpacity * 100)} onChange={(e) => setWmImageOpacity(+e.target.value / 100)} />
                       </div>
                     </div>
                   )}
