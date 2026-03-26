@@ -414,7 +414,7 @@
       ctx.textBaseline = "middle";
       ctx.textAlign = "center";
       ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-      return canvas;
+      return { canvas, naturalW, naturalH };
     }
 
     const THEMES = {
@@ -593,7 +593,7 @@
         }
         const arParam = aspectRatioEnabled ? { w: aspectRatioW, h: aspectRatioH } : null;
         const results = lines.map((line, i) => {
-          const canvas = renderToCanvas(line, {
+          const { canvas, naturalW, naturalH } = renderToCanvas(line, {
             fontFamily,
             fontSize,
             bgColor,
@@ -605,7 +605,7 @@
             watermark: wmImageEl ? { image: wmImageEl, imageOpacity: wmImageOpacity, imageScale: wmImageScale, imagePos: wmImagePos } : null,
             aspectRatio: arParam,
           });
-          return { text: line, dataUrl: canvas.toDataURL("image/png"), index: i + 1 };
+          return { text: line, dataUrl: canvas.toDataURL("image/png"), index: i + 1, naturalW, naturalH };
         });
         setPreviews(results);
         setDisplayUrls({});
@@ -623,7 +623,7 @@
         // Clear stale URLs immediately so new item.dataUrl is shown while watermark is applied
         setDisplayUrls({});
         previews.forEach((item, i) => {
-          applyWatermark(item.dataUrl).then(url => {
+          applyWatermark(item.dataUrl, item.naturalW, item.naturalH).then(url => {
             setDisplayUrls(prev => ({ ...prev, [i]: url }));
           });
         });
@@ -671,7 +671,7 @@
       ];
 
 
-      function applyWatermark(dataUrl) {
+      function applyWatermark(dataUrl, naturalW, naturalH) {
         return new Promise((resolve) => {
           if (!wmText.trim()) { resolve(dataUrl); return; }
           const img = new Image();
@@ -683,7 +683,13 @@
             ctx.drawImage(img, 0, 0);
             ctx.save();
             ctx.globalAlpha = wmTextOpacity;
-            const scaledSize = wmTextSize * (scale || 1);
+            // Normalize by natural dimensions so watermark size stays visually consistent
+            // regardless of AR expansion. Without AR, naturalW===c.width and naturalH===c.height
+            // so the ratio is 1. With AR, the canvas is larger so we scale up to compensate.
+            const arScale = naturalW && naturalH
+              ? Math.max(c.width / naturalW, c.height / naturalH)
+              : 1;
+            const scaledSize = wmTextSize * (scale || 1) * arScale;
             ctx.font = `${scaledSize}px ${wmTextFont}`;
             ctx.fillStyle = wmTextColor;
             const lineHeight = scaledSize * 1.3;
