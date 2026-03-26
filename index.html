@@ -7,6 +7,7 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/jszip@3/dist/jszip.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -392,6 +393,7 @@
       const [wmText, setWmText] = useState(c("wmText", "Prime Benchmark Private Limited"));
       const [wmTextPos, setWmTextPos] = useState(c("wmTextPos", "Bottom Center"));
       const [wmTextSize, setWmTextSize] = useState(c("wmTextSize", 14));
+      const [wmTextFont, setWmTextFont] = useState(c("wmTextFont", "sans-serif"));
       const [wmTextColor, setWmTextColor] = useState(c("wmTextColor", "#ffffff"));
       const [wmTextOpacity, setWmTextOpacity] = useState(c("wmTextOpacity", 0.5));
       const [wmImage, setWmImage] = useState(c("wmImage", { src: "https://primebenchmark.com.np/logo.png", name: "primebenchmark.com.np/logo.png" }));
@@ -404,11 +406,11 @@
       useEffect(() => {
         saveCache({
           text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
-          selectedPreset, theme, wmText, wmTextPos, wmTextSize, wmTextColor, wmTextOpacity,
+          selectedPreset, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
           wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale,
         });
       }, [text, fontSize, padding, bgColor, fgColor, fontIndex, bold, roundness, scale,
-          selectedPreset, theme, wmText, wmTextPos, wmTextSize, wmTextColor, wmTextOpacity,
+          selectedPreset, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
           wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale]);
 
       const clearCache = () => {
@@ -482,9 +484,48 @@
             setDisplayUrls(prev => ({ ...prev, [i]: url }));
           });
         });
-      }, [previews, wmText, wmTextPos, wmTextSize, wmTextColor, wmTextOpacity]);
+      }, [previews, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity]);
 
       const WM_POSITIONS = ["Center", "Top Left", "Top Center", "Top Right", "Bottom Left", "Bottom Center", "Bottom Right"];
+      const WM_FONTS = [
+        "sans-serif", "serif", "monospace", "cursive", "fantasy",
+        "Arial", "Arial Black", "Arial Narrow", "Arial Rounded MT Bold",
+        "Georgia", "Times New Roman", "Palatino Linotype", "Book Antiqua", "Garamond",
+        "Courier New", "Lucida Console", "Lucida Sans Typewriter", "Courier",
+        "Verdana", "Tahoma", "Trebuchet MS", "Geneva",
+        "Impact", "Haettenschweiler", "Franklin Gothic Medium",
+        "Gill Sans", "Gill Sans MT", "Calibri", "Candara", "Constantia", "Corbel",
+        "Century Gothic", "Futura", "Optima", "Myriad Pro",
+        "Helvetica", "Helvetica Neue",
+        "Segoe UI", "Segoe Print", "Segoe Script",
+        "Comic Sans MS", "Papyrus", "Brush Script MT",
+        "Lucida Handwriting", "Lucida Bright", "Lucida Sans Unicode",
+        "Rockwell", "Rockwell Extra Bold", "Rockwell Condensed",
+        "Copperplate", "Copperplate Gothic Light", "Copperplate Gothic Bold",
+        "Didot", "Bodoni MT", "Baskerville", "Caslon",
+        "Perpetua", "Trajan Pro", "Centaur",
+        "Cambria", "Cambria Math",
+        "Consolas", "Monaco",
+        "Menlo", "Andale Mono",
+        "Charcoal", "Chicago",
+        "Symbol", "Webdings", "Wingdings",
+        "MS Sans Serif", "MS Serif",
+        "Palatino", "Bookman Old Style",
+        "Century", "Century Schoolbook",
+        "Goudy Old Style", "Hoefler Text",
+        "Minion Pro", "Myriad Web",
+        "Frutiger", "Stone Sans", "Stone Serif",
+        "Avenir", "Avenir Next",
+        "Trade Gothic", "News Gothic MT",
+        "Eurostile", "Bank Gothic",
+        "Kabel", "Syntax",
+        "OCR A Extended", "Letter Gothic",
+        "American Typewriter", "ITC Bookman",
+        "ITC Avant Garde Gothic", "ITC Lubalin Graph",
+        "Zapf Chancery", "Zapf Dingbats",
+        "Apple Chancery", "Apple Garamond",
+        "Skia", "Charlemagne Std",
+      ];
 
 
       function applyWatermark(dataUrl) {
@@ -499,13 +540,19 @@
             ctx.drawImage(img, 0, 0);
             ctx.save();
             ctx.globalAlpha = wmTextOpacity;
-            ctx.font = `${wmTextSize * (scale || 1)}px sans-serif`;
+            const scaledSize = wmTextSize * (scale || 1);
+            ctx.font = `${scaledSize}px ${wmTextFont}`;
             ctx.fillStyle = wmTextColor;
-            const metrics = ctx.measureText(wmText);
-            const tw = metrics.width;
-            const th = wmTextSize * (scale || 1);
-            const [tx, ty] = getWmCoords(wmTextPos, c.width, c.height, tw, th);
-            ctx.fillText(wmText, tx, ty + th);
+            const lineHeight = scaledSize * 1.3;
+            const wmLines = wmText.split("\n");
+            const maxWidth = Math.max(...wmLines.map(l => ctx.measureText(l).width));
+            const totalHeight = lineHeight * wmLines.length;
+            const [tx, ty] = getWmCoords(wmTextPos, c.width, c.height, maxWidth, totalHeight);
+            wmLines.forEach((line, i) => {
+              const lw = ctx.measureText(line).width;
+              const lx = tx + (maxWidth - lw) / 2;
+              ctx.fillText(line, lx, ty + scaledSize + i * lineHeight);
+            });
             ctx.restore();
             resolve(c.toDataURL("image/png"));
           };
@@ -527,6 +574,21 @@
         previews.forEach((item, i) => {
           setTimeout(() => downloadOne(item), i * 200);
         });
+      };
+
+      const downloadZip = async () => {
+        const zip = new JSZip();
+        for (const item of previews) {
+          const url = hasWatermark ? await applyWatermark(item.dataUrl) : item.dataUrl;
+          const base64 = url.split(",")[1];
+          zip.file(`${item.text}.png`, base64, { base64: true });
+        }
+        const blob = await zip.generateAsync({ type: "blob" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "kanji-studio.zip";
+        a.click();
+        URL.revokeObjectURL(a.href);
       };
 
       const applyPreset = (i) => {
@@ -614,10 +676,10 @@
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button className="theme-toggle-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                  {theme === "dark" ? "☀ Light" : "● Dark"}
+                  {theme === "dark" ? "☀️ Light" : "🌑 Dark"}
                 </button>
                 <button className="theme-toggle-btn" onClick={clearCache} title="Clear all saved preferences and reload">
-                  ✕ Clear Cache
+                  🗑️ Clear Cache
                 </button>
               </div>
             </div>
@@ -733,12 +795,12 @@
                   {/* Text watermark */}
                   <div>
                     <div style={{ fontSize: 12, color: t.muted, marginBottom: 4 }}>Text</div>
-                    <input
-                      type="text"
+                    <textarea
                       value={wmText}
                       onChange={(e) => setWmText(e.target.value)}
                       placeholder="e.g. © My Name"
-                      style={{ width: "100%", background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 8, color: t.text, padding: "8px 10px", fontSize: 13, outline: "none" }}
+                      rows={3}
+                      style={{ width: "100%", background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 8, color: t.text, padding: "8px 10px", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit", boxSizing: "border-box" }}
                     />
                   </div>
                   {wmText.trim() && (
@@ -753,13 +815,19 @@
                         <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Color</div>
                         <input type="color" value={wmTextColor} onChange={(e) => setWmTextColor(e.target.value)} style={{ width: 36, height: 36 }} />
                       </div>
-                      <div>
-                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Size — {wmTextSize}px</div>
-                        <input type="range" min={0} max={72} step={1} value={wmTextSize} onChange={(e) => setWmTextSize(+e.target.value)} />
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Font</div>
+                        <select value={wmTextFont} onChange={(e) => setWmTextFont(e.target.value)} style={{ width: "100%", background: t.inputBg, border: `1px solid ${t.inputBorder}`, borderRadius: 6, color: t.text, padding: "6px", fontSize: 12, fontFamily: wmTextFont }}>
+                          {WM_FONTS.map(f => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+                        </select>
                       </div>
-                      <div>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Size — {wmTextSize}px</div>
+                        <input type="range" min={0} max={72} step={0.25} value={wmTextSize} onChange={(e) => setWmTextSize(+e.target.value)} style={{ width: "100%" }} />
+                      </div>
+                      <div style={{ gridColumn: "1 / -1" }}>
                         <div style={{ fontSize: 11, color: t.muted, marginBottom: 4 }}>Opacity — {Math.round(wmTextOpacity * 100)}%</div>
-                        <input type="range" min={0} max={100} step={1} value={Math.round(wmTextOpacity * 100)} onChange={(e) => setWmTextOpacity(+e.target.value / 100)} />
+                        <input type="range" min={0} max={100} step={1} value={Math.round(wmTextOpacity * 100)} onChange={(e) => setWmTextOpacity(+e.target.value / 100)} style={{ width: "100%" }} />
                       </div>
                     </div>
                   )}
@@ -823,9 +891,14 @@
                 <button className="gen-btn primary" onClick={generatePreviews} disabled={generating || lines.length === 0}>
                   {generating ? "Generating..." : `Generate ${lines.length} Image${lines.length !== 1 ? "s" : ""}`}
                 </button>
-                <button className="gen-btn secondary" onClick={downloadAll} disabled={previews.length === 0} style={{ opacity: previews.length === 0 ? 0.4 : 1, cursor: previews.length === 0 ? "default" : "pointer" }}>
-                  ↓ Download All{previews.length > 0 ? ` (${previews.length} images)` : ""}
-                </button>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="gen-btn secondary" onClick={downloadAll} disabled={previews.length === 0} style={{ flex: 1, opacity: previews.length === 0 ? 0.4 : 1, cursor: previews.length === 0 ? "default" : "pointer" }}>
+                    ↓ Individual{previews.length > 0 ? ` (${previews.length})` : ""}
+                  </button>
+                  <button className="gen-btn secondary" onClick={downloadZip} disabled={previews.length === 0} style={{ flex: 1, opacity: previews.length === 0 ? 0.4 : 1, cursor: previews.length === 0 ? "default" : "pointer" }}>
+                    ↓ ZIP{previews.length > 0 ? ` (${previews.length})` : ""}
+                  </button>
+                </div>
               </div>
             </div>
 
