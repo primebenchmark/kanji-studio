@@ -532,6 +532,8 @@
           selectedPreset, presetType, theme, wmText, wmTextPos, wmTextSize, wmTextFont, wmTextColor, wmTextOpacity,
           wmImage, wmImageUrl, wmImagePos, wmImageOpacity, wmImageScale]);
 
+      const [showClearModal, setShowClearModal] = useState(false);
+      const [clearConfirmText, setClearConfirmText] = useState("");
       const clearCache = () => {
         try { localStorage.removeItem(CACHE_KEY); } catch {}
         window.location.reload();
@@ -776,8 +778,18 @@
             .page-btn:disabled { opacity: 0.3; cursor: default; }
             select { color-scheme: ${theme === "dark" ? "dark" : "light"}; }
             select option { background: ${theme === "dark" ? "#1a1a2e" : "#ffffff"}; color: ${t.text}; }
-            .theme-toggle-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid ${t.presetBorder}; background: ${t.presetBg}; color: ${t.muted}; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+            .theme-toggle-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid ${t.presetBorder}; background: ${t.presetBg}; color: ${t.muted}; font-size: 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; padding: 0; }
             .theme-toggle-btn:hover { background: ${t.presetHoverBg}; color: ${t.text}; }
+            .clear-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+            .clear-modal { background: ${theme === "dark" ? "#1a1520" : "#f5f3f0"}; border: 1px solid ${t.presetBorder}; border-radius: 12px; padding: 28px 32px; max-width: 380px; width: 90%; }
+            .clear-modal h3 { margin: 0 0 10px; color: ${t.text}; font-size: 17px; }
+            .clear-modal p { margin: 0 0 18px; color: ${t.muted}; font-size: 14px; }
+            .clear-modal input { width: 100%; box-sizing: border-box; padding: 8px 12px; border-radius: 8px; border: 1px solid ${t.presetBorder}; background: ${t.presetBg}; color: ${t.text}; font-size: 15px; font-family: monospace; outline: none; }
+            .clear-modal input:focus { border-color: ${t.accent}; }
+            .clear-modal-btns { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+            .clear-modal-cancel { padding: 7px 18px; border-radius: 8px; border: 1px solid ${t.presetBorder}; background: ${t.presetBg}; color: ${t.muted}; font-size: 13px; cursor: pointer; }
+            .clear-modal-confirm { padding: 7px 18px; border-radius: 8px; border: none; background: #c0392b; color: #fff; font-size: 13px; cursor: pointer; opacity: 0.4; transition: opacity 0.2s; }
+            .clear-modal-confirm.ready { opacity: 1; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
             .fade-in { animation: fadeIn 0.4s ease forwards; }
           `}</style>
@@ -796,13 +808,32 @@
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button className="theme-toggle-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                  {theme === "dark" ? "☀️ Light" : "🌑 Dark"}
+                <button className="theme-toggle-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+                  {theme === "dark" ? "☀️" : "🌙"}
                 </button>
-                <button className="theme-toggle-btn" onClick={clearCache} title="Clear all saved preferences and reload">
-                  🗑️ Clear Cache
+                <button className="theme-toggle-btn" onClick={() => { setClearConfirmText(""); setShowClearModal(true); }} title="Clear all saved preferences">
+                  🗑️
                 </button>
               </div>
+              {showClearModal && (
+                <div className="clear-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowClearModal(false); }}>
+                  <div className="clear-modal">
+                    <h3>Clear Cache</h3>
+                    <p>This will erase all saved preferences. Type <strong>CLEAR</strong> to confirm.</p>
+                    <input
+                      autoFocus
+                      value={clearConfirmText}
+                      onChange={(e) => setClearConfirmText(e.target.value)}
+                      placeholder="Type CLEAR"
+                      onKeyDown={(e) => { if (e.key === "Enter" && clearConfirmText === "CLEAR") clearCache(); if (e.key === "Escape") setShowClearModal(false); }}
+                    />
+                    <div className="clear-modal-btns">
+                      <button className="clear-modal-cancel" onClick={() => setShowClearModal(false)}>Cancel</button>
+                      <button className={"clear-modal-confirm" + (clearConfirmText === "CLEAR" ? " ready" : "")} disabled={clearConfirmText !== "CLEAR"} onClick={clearCache}>Clear</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1037,6 +1068,14 @@
                   </button>
                   <button className="gen-btn secondary" onClick={downloadZip} disabled={previews.length === 0} style={{ flex: 1, opacity: previews.length === 0 ? 0.4 : 1, cursor: previews.length === 0 ? "default" : "pointer" }}>
                     ↓ ZIP{previews.length > 0 ? ` (${previews.length})` : ""}
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button className="gen-btn secondary" onClick={() => setText("")} style={{ flex: 1, color: "#e07070" }}>
+                    ✕ Clear List
+                  </button>
+                  <button className="gen-btn secondary" onClick={() => setPreviews([])} disabled={previews.length === 0} style={{ flex: 1, color: "#e07070", opacity: previews.length === 0 ? 0.4 : 1, cursor: previews.length === 0 ? "default" : "pointer" }}>
+                    ✕ Clear Previews
                   </button>
                 </div>
               </div>
